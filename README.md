@@ -1,2 +1,2 @@
 # Watch-It-Burn
-Dynamic Wildfire Simulator
+A Dynamic Wildfire Simulator
