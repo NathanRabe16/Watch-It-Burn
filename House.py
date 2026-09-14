@@ -1,10 +1,9 @@
-from Grid import Grid
 import random
 
 class House:
 
-    def __init__(self, type, x, y, grid):
-        self.state = type
+    def __init__(self, state, x, y, grid):
+        self.state = state
         self.grid_x = x
         self.grid_y = y
         self.grid = grid
@@ -12,6 +11,7 @@ class House:
         self.burned = False
         self.damaged = False
         self.burn_clock = 5
+        self.car = "@"
 
     def tick(self):
         if self.burned == True:
@@ -39,10 +39,13 @@ class House:
 
     def get_burning(self):
         return self.burning
+
+    def get_car(self):
+        return self.car
     
     def on_fire(self):
     # change sprites and stuff
-        pass
+        self.car = 'F'
 
     def to_ashes(self):
     # houses have a chance to resist burning and return as a damaged house

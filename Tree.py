@@ -1,19 +1,22 @@
-import Grid
 import random
 
-class Tile:
+class Tree:
 
-    def __init__(self, type, x, y, grid):
-        self.state = type
+    def __init__(self, state, x, y, grid):
+        self.state = state
         self.grid_x = x
         self.grid_y = y
         self.grid = grid
         self.burning = False
         self.burned = False
         self.burn_clock = 6
+        self.car = "!"
 
     def set_up(self):
         pass
+
+    def get_car(self):
+        return self.car
 
     def tick(self):
         if self.burned == True:
@@ -45,7 +48,7 @@ class Tile:
 
     def on_fire(self):
     # change sprites and stuff
-        pass
+        self.car = 'F'
 
     def to_ashes(self):
     # change sprites and stuff, clean up thread/simplify logic for remaining sim

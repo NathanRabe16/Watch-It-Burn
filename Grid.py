@@ -1,169 +1,111 @@
-import numpy as np
-import Grass
 import random
-import House
-import Water
-import Tree
-import Shrub
+import Tiles
 
 
 class Grid:
 
-    def __init__(self, water : bool, houses : bool):
-        self.grid = [[0 for _ in range(10)] for _ in range(10)]
+    def __init__(self, water: bool, houses: bool, size: int = 10):
+        self.size = size
+        self.cells = [[None] * size for _ in range(size)]
         self.gen_water = water
         self.gen_houses = houses
 
-    def generate_grid(self):
-        if self.gen_water is True:
+    def in_bounds(self, x, y):
+        return 0 <= x < self.size and 0 <= y < self.size
+
+    def get(self, x, y):
+        return self.cells[x][y] if self.in_bounds(x, y) else None
+
+    def is_empty(self, x, y):
+        return self.in_bounds(x, y) and self.cells[x][y] is None
+
+    def place(self, state, x, y):
+        if not self.is_empty(x, y):
+            return False
+        self.cells[x][y] = Tiles.Tile(state, x, y, self)
+        return True
+
+    def empty_cells(self):
+        return [(x, y)
+                for x in range(self.size)
+                for y in range(self.size)
+                if self.cells[x][y] is None]
+
+    def neighbors(self, x, y):
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            tile = self.get(x + dx, y + dy)
+            if tile is not None:
+                yield tile
+
+    def generate(self):
+        if self.gen_water:
             self.generate_water()
-        if self.gen_houses is True:
+        if self.gen_houses:
             self.generate_houses()
-        zero_counter = 0
-        for x in range(1, 10):
-            for y in range(1, 10):
-                if self.grid[x][y] == 0:
-                    zero_counter += 1
-        for i in range(0, zero_counter):
-            self.fill_grid()
+        self.fill_vegetation()
 
-    def generate_water(self):
-        types = []
-        bodies = random.randint(0, 4) # 0-4 bodies of water
-        if bodies == 0:
+    def generate_water(self, max=4):
+        for _ in range(random.randint(0, max)):
+            if random.random() < 0.5:
+                self.generate_lake()
+            else:
+                self.generate_river()
+
+    def generate_lake(self, size=4):
+        spots = self.empty_cells()
+        if not spots:
             return
+        x, y = random.choice(spots)
+        self.place("Lake", x, y)
+        for _ in range(size - 1):
+            options = [(x + dx, y + dy)
+                       for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                       if self.is_empty(x + dx, y + dy)]
+            if not options:          # boxed in then stop growing
+                break
+            x, y = random.choice(options)
+            self.place("Lake", x, y)
 
-        for i in range(bodies):
-            type = random.randint(1, 2) # 1=lake, 2=river
-            types.append(type)
-
-        for i in types:
-            if i == 1:
-                #Lake generation logic
-                found = False
-                while found is False:
-                    x =  random.randint(1, 10)
-                    y =  random.randint(1, 10)
-                    if self.grid[x][y] == 0:
-                        found = True
-                        self.grid[x][y] = Water("Lake", x, y, self)
-                    for i in range(1,4):
-                        found = False
-                        while found is False:
-                            x2 = x + random.randint(-1,1)
-                            y2 = y + random.randint(-1,1)
-                            if self.grid[x][y] == 0:
-                                found = True
-                                x = x2
-                                y = y2
-                                self.grid[x][y] = Water("Lake", x, y, self)
-            else:
-                #River + Bridge generation logic
-                startx, starty = self.find_edge_point()
-                endx, endy = self.find_edge_point()
-                x_dist = startx - endx
-                y_dist = starty - endy
-                # x_dist > 0 -> go left otherwise right
-                # y_dist > 0 go down otherwise up
-                x = startx
-                y = starty
-                tile_count = abs(y_dist) + abs(x_dist)
-                for i in range(0, tile_count):
-                    self.grid[x][y] = Water("River", x, y)
-                    if x != endx:
-                        if(x_dist > 0):
-                            x -+ 1
-                        else:
-                            x += 1
-                    if y != endy:
-                        if(y_dist > 0):
-                            y -+ 1
-                        else:
-                            y += 1
-
-    def find_edge_point(self):
-        coinflip =  random.randint(1, 2)
-        if coinflip == 1:
-            x = random.randint(1, 10)
-            coinflip =  random.randint(1, 2)
-            if coinflip == 1:
-                y == 1
-            else:
-                y == 10
-        if coinflip == 2:
-            y = random.randint(1, 10)
-            coinflip =  random.randint(1, 2)
-            if coinflip == 1:
-                x == 1
-            else:
-                x == 10
-        return x, y
-
-    def generate_houses(self):
-        num_houses = random.randint(0, 6) # 0-6 houses
-        if num_houses == 0:
+    def generate_river(self):
+        start = self.random_edge_point()
+        end = self.random_edge_point()
+        if start == end:
             return
+        x, y = start
+        ex, ey = end
+        bridge_chance = 4
+        while True:
+            if self.is_empty(x, y):
+                on_bank = (x, y) in (start, end)
+                if not on_bank and random.randint(1, bridge_chance) == 1:
+                    self.place("Bridge", x, y)
+                    bridge_chance += 2
+                else:
+                    self.place("River", x, y)
+            if (x, y) == end:
+                break
+            if x != ex:
+                x += 1 if ex > x else -1
+            else:
+                y += 1 if ey > y else -1
 
-        for i in num_houses:
-            found = False
-            while found is False:
-                x =  random.randint(1, 10)
-                y =  random.randint(1, 10)
-                if self.grid[x][y] == 0:
-                    found = True
-                    self.grid[x][y] = House("House", x, y, self)
-                else:
-                    pass
+    def random_edge_point(self):
+        last = self.size - 1
+        if random.random() < 0.5:
+            return random.randint(0, last), random.choice((0, last))
+        return random.choice((0, last)), random.randint(0, last)
 
-    def fill_grid(self):
-        type = self.weighted_random()
-        if type == 1:
-            # Tree gen logic
-            found = False
-            while found is False:
-                x =  random.randint(1, 10)
-                y =  random.randint(1, 10)
-                if self.grid[x][y] == 0:
-                    found = True
-                    self.grid[x][y] = Tree("Tree", x, y)
-                else:
-                    pass
-        elif type == 2:
-            # Shrub gen logic
-            found = False
-            while found is False:
-                x =  random.randint(1, 10)
-                y =  random.randint(1, 10)
-                if self.grid[x][y] == 0:
-                    found = True
-                    self.grid[x][y] = Shrub("Shrub", x, y)
-                else:
-                    pass
-        elif type == 3:
-            # Grass gen logic
-            found = False
-            while found is False:
-                x =  random.randint(1, 10)
-                y =  random.randint(1, 10)
-                if self.grid[x][y] == 0:
-                    found = True
-                    self.grid[x][y] = Grass("Grass", x, y)
-                else:
-                    pass
+    def generate_houses(self, max_houses=6):
+        spots = self.empty_cells()
+        random.shuffle(spots)
+        for x, y in spots[:random.randint(0, max_houses)]:
+            self.place("House", x, y)
+
+    def fill_vegetation(self):
+        if self.gen_water:
+            weights = {"Tree": 35, "Shrub": 25, "Grass": 25, "Pond": 15}
         else:
-            # Pond gen logic
-            found = False
-            while found is False:
-                x =  random.randint(1, 10)
-                y =  random.randint(1, 10)
-                if self.grid[x][y] == 0:
-                    found = True
-                    self.grid[x][y] = Water("Pond", x, y)
-                else:
-                    pass
-
-    def weighted_random(self):
-        if self.gen_water is True:
-            return random.choices([1, 2, 3, 4], weights=[35, 25, 25, 15])[0]
-        else:
-            return random.choices([1, 2, 3, 4], weights=[40, 30, 30, 0])[0]
+            weights = {"Tree": 40, "Shrub": 30, "Grass": 30}
+        states, w = list(weights), list(weights.values())
+        for x, y in self.empty_cells():
+            self.place(random.choices(states, weights=w)[0], x, y)

@@ -1,6 +1,7 @@
 import random
+import TileTypes
 
-class Grass:
+class Tile:
 
     def __init__(self, state, x, y, grid):
         self.state = state
@@ -9,14 +10,17 @@ class Grass:
         self.grid = grid
         self.burning = False
         self.burned = False
-        self.burn_clock = 3
-        self.car = "#"
-        self.BURN_PROB = {
-            "burn": {0: 0.0, 1: 0.35, 2: 0.70, 3: 0.95, 4: 1.0},
-            }
+        self.apply_state(state)
+        
 
-    def set_up(self):
-        pass
+    def apply_state(self, state):
+        self.state = state
+        self.type = TileTypes.STATES[state]
+        self.burn_clock = self.type["burn_duration"]
+        self.car = self.type["car"]
+        self.BURN_PROB = {
+            "burn": self.type["flammability"],
+            }
 
     def get_car(self):
         return self.car
@@ -55,5 +59,4 @@ class Grass:
 
     def to_ashes(self):
     # change sprites and stuff, clean up thread/simplify logic for remaining sim
-        pass
-
+        self.apply_state("Ashes")
