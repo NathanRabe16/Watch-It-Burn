@@ -37,6 +37,22 @@ class Grid:
             if tile is not None:
                 yield tile
 
+    def all_ashes(self):
+        for i in range (0, self.size):
+            for j in range (0, self.size):
+                check = self.get(j, i).get_burning()
+                if check is True:
+                    return False
+        return True
+
+    def any_burn(self):
+        for i in range (0, self.size):
+            for j in range (0, self.size):
+                check = self.get(j, i).get_burning()
+                if check is True:
+                    return True
+        return False
+
     def generate(self):
         if self.gen_water:
             self.generate_water()
